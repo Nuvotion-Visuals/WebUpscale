@@ -23,27 +23,15 @@ export async function initializeONNX(setProgress) {
   }
 
   setProgress(0)
-  await initializeSuperRes(setProgress)
-  setProgress(1)
 
-  await new Promise((resolve) => setTimeout(resolve, 300))
-}
-
-export async function upScaleFromURI(uri, upscaleFactor) {
-  let pixels = await getPixels(uri);
-  
-  let outArr = pixels;
-  
-  for (let s = 0; s < upscaleFactor; s += 1) {
-    outArr = await upscaleFrame(outArr);
+  // Inline superRes initialization
+  console.debug('Initializing super resolution')
+  if (superSession !== null) {
+    return
   }
-  
-  const canvas = savePixels(outArr, 'canvas');
-  return canvas.toDataURL('image/png');
-}
 
-async function fetchModel(filepathOrUri, setProgress, startProgress, endProgress) {
-  const response = await fetch(filepathOrUri)
+  // Inline fetchModel
+  const response = await fetch('./models/superRes.onnx')
   const reader = response.body.getReader()
   const length = parseInt(response.headers.get('content-length'))
   const data = new Uint8Array(length)
@@ -59,43 +47,33 @@ async function fetchModel(filepathOrUri, setProgress, startProgress, endProgress
     else {
       data.set(value, received)
       received += value.length
-      setProgress(startProgress + (received / length) * (endProgress - startProgress))
+      setProgress(0.5 + (received / length) * (0.9 - 0.5))
     }
   }
-  return data.buffer
-}
 
-async function processImage(imageArray) {
-  const width = imageArray.shape[0]
-  const height = imageArray.shape[1]
-  let sr
-  const tensor = new ort.Tensor('uint8', imageArray.data.slice(), [width, height, 4])
-  const feeds = { input: tensor }
-
-  try {
-    const output = await superSession.run(feeds)
-    sr = output.output
-  } catch (e) {
-    console.log('Failed to run super resolution')
-    console.log(e)
-  }
-  return sr
-}
-
-async function initializeSuperRes(setProgress) {
-  console.debug('Initializing super resolution')
-  if (superSession !== null) {
-    return
-  }
-
-  const superBuf = await fetchModel('./models/superRes.onnx', setProgress, 0.5, 0.9)
-  superSession = await ort.InferenceSession.create(superBuf, {
+  superSession = await ort.InferenceSession.create(data.buffer, {
     executionProviders: ['wasm'],
     graphOptimizationLevel: 'all',
     enableCpuMemArena: true,
     enableMemPattern: true,
     executionMode: 'sequential'
   })
+
+  setProgress(1)
+  await new Promise((resolve) => setTimeout(resolve, 300))
+}
+
+export async function upScaleFromURI(uri, upscaleFactor) {
+  let pixels = await getPixels(uri);
+  
+  let outArr = pixels;
+  
+  for (let s = 0; s < upscaleFactor; s += 1) {
+    outArr = await upscaleFrame(outArr);
+  }
+  
+  const canvas = savePixels(outArr, 'canvas');
+  return canvas.toDataURL('image/png');
 }
 
 async function upscaleFrame(imageArray) {
@@ -132,8 +110,22 @@ async function upscaleFrame(imageArray) {
       ops.assign(subArr, inSlice)
 
       // Run the super resolution model on the chunk, copy the result into the combined array
-      const chunkData = await processImage(subArr)
-      const chunkArr = ndarray(chunkData.data, chunkData.dims)
+      const width = subArr.shape[0]
+      const height = subArr.shape[1]
+      let sr
+      const tensor = new ort.Tensor('uint8', subArr.data.slice(), [width, height, 4])
+      const feeds = { input: tensor }
+
+      try {
+        const output = await superSession.run(feeds)
+        sr = output.output
+      } 
+      catch (e) {
+        console.log('Failed to run super resolution')
+        console.log(e)
+      }
+
+      const chunkArr = ndarray(sr.data, sr.dims)
       const chunkSlice = chunkArr.lo((x - xStart) * 2, (y - yStart) * 2, 0).hi(outW, outH, 4)
       const outSlice = outArr.lo(x * 2, y * 2, 0).hi(outW, outH, 4)
       ops.assign(outSlice, chunkSlice)

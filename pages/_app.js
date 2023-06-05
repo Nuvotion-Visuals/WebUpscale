@@ -1,11 +1,8 @@
 import './globals.css'
 
 import Head from 'next/head'
-import { registerEventHandlers } from '@/services/windowUtilities'
 
 function MyApp({ Component, pageProps }) {
-  registerEventHandlers()
-
   return (
     <>
       <Head>

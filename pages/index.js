@@ -1,6 +1,5 @@
 import { useAppStateStore, useImageStore } from '@/services/useState'
 import { useEffect } from 'react'
-import { useWindowSize } from '@/services/windowUtilities'
 import { initializeONNX, upScaleFromURI } from '@/services/inference/utils'
 import Image from 'next/image'
 import { ReactCompareSlider } from 'react-compare-slider'
@@ -139,13 +138,7 @@ function UpscaleFactorComponent() {
 }
 
 export default function Main() {
-  const size = useWindowSize()
-  const setMobile = useAppStateStore((state) => state.setMobile)
   const outputURI = useImageStore((state) => state.outputURI)
-
-  useEffect(() => {
-    setMobile(size.width / size.height < 1.0)
-  }, [size])
 
   return (
     <div>

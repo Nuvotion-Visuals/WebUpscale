@@ -5,7 +5,6 @@ import { useAppStateStore, useImageStore } from '@/services/useState'
 
 import ImageDisplay from '@/components/ImageDisplayComponent'
 import RunComponent from '@/components/RunComponent'
-import ProgressComponent from '@/components/ProgressComponent'
 import { useEffect } from 'react'
 import { useWindowSize } from '@/services/windowUtilities'
 
@@ -30,7 +29,6 @@ function MobileLayout() {
   return (
     <div className="h-fit overflow-hidden">
       <div className="grid grid-flow-col gap-1 ml-1 mr-1 justify-center mb-2"></div>
-      <ProgressComponent />
       <div className="mb-2">
         <ImageDisplay />
       </div>
@@ -50,7 +48,6 @@ function MobileLayout() {
         <Sidebar />
         <div className="h-3/4 grow w-full">
           <ImageDisplay />
-          <ProgressComponent />
         </div>
       </main>
     </div>

@@ -58,29 +58,3 @@ text-base font-medium h-12 border-blue border-2 bg-blue disabled:bg-white disabl
     </div>
   )
 }
-
-
-export function DoneButtonComponent() {
-  const { setTags, setInputURI, tempURI } = useImageStore()
-  const { setInputModalOpen, setSelectedPreset } = useAppStateStore()
-
-  return (
-    <div className="md:grid-cols-1 md:grid hidden">
-      <button
-        id="done-button"
-        type="button"
-        className="mt-7 rounded-md right-0 bottom-0 text-blue shadow-sm px-4 py-1
-text-base font-medium h-12 focus:outline-none focus:ring-2 focus:ring-offset-2
-border-blue border-2 bg-white hover:bg-blue hover:text-white disabled:bg-white disabled:text-gray-200 disabled:border-gray-200"
-        onClick={() => {
-          setInputURI(tempURI)
-          setTags(null)
-          setInputModalOpen(false)
-          setSelectedPreset('')
-        }}
-      >
-        Done
-      </button>
-    </div>
-  )
-}

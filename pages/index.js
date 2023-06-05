@@ -1,4 +1,4 @@
-import { initializeONNX, upScaleFromURI } from 'upscaling'
+import { initialize, upscale } from 'upscale'
 import Image from 'next/image'
 import { ReactCompareSlider } from 'react-compare-slider'
 import { create } from 'zustand'
@@ -142,12 +142,12 @@ const RunComponent = () => {
   return (
     <button disabled={modelLoading || running} onClick={() => {
         setLoadProg(0)
-        initializeONNX(setLoadProg)
+        initialize(setLoadProg)
           .then(() => {
             setRunning(true)
           })
           .then(() => {
-            upScaleFromURI(inputURI, upscaleFactor)
+            upscale(inputURI, upscaleFactor)
               .then((result) => {
                 setOutputURI(result)
               })

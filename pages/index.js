@@ -1,10 +1,8 @@
 import { DownloadComponent } from '@/components/ButtonComponents'
-import { ModalComponent, UploadButtonComponent } from '@/components/ModalComponent'
+import { UploadButtonComponent } from '@/components/ButtonComponents'
 import { Sidebar, UpscaleFactorComponent } from '@/components/SidebarComponent'
 import { useAppStateStore, useImageStore } from '@/services/useState'
 
-import Error from '@/components/ErrorComponent'
-import Feedback from '@/components/FeedbackModal'
 import ImageDisplay from '@/components/ImageDisplayComponent'
 import RunComponent from '@/components/RunComponent'
 import ProgressComponent from '@/components/ProgressComponent'
@@ -48,9 +46,6 @@ function MobileLayout() {
         </div>
       )}
       <div className="overflow-hidden hidden md:block min-h-screen hidden" style={{display: 'none'}}>
-      <Error />
-      <Feedback />
-      <ModalComponent />
       <main className="flex-1">
         <Sidebar />
         <div className="h-3/4 grow w-full">

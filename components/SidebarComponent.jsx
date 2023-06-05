@@ -2,8 +2,6 @@ import { DownloadComponent } from '@/components/ButtonComponents'
 import { useAppStateStore, useImageStore } from '@/services/useState'
 
 import RunComponent from '@/components/RunComponent'
-import TagComponent from '@/components/TagComponent'
-import { UploadSVG } from '@/components/SVGComponents'
 
 const Sidebar = () => {
   const { outputURI, tags } = useImageStore()
@@ -23,14 +21,7 @@ const Sidebar = () => {
               <UpscaleContainer />
             )}
           </div>
-          {tags != null && (
-            <>
-              <hr />
-              <div className="mt-10 mx-3 space-y-2 grid grid-cols-1">
-                <TagComponent tags={tags} />
-              </div>
-            </>
-          )}
+         
         </div>
       </div>
     </div>
@@ -79,7 +70,7 @@ const InputComponent = () => {
       }}
       disabled={running}
     >
-      <UploadSVG /> <span>Choose Image/GIF</span>
+      <span>Choose Image/GIF</span>
     </button>
   )
 }

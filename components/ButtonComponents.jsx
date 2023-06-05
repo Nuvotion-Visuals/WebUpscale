@@ -1,5 +1,4 @@
-import { CopySVG, DownloadSVG, UploadingSVG } from '@/components/SVGComponents'
-import { downloadImage, getDataURIFromInput, uploadToImgur } from '@/services/imageUtilities'
+import { downloadImage } from '@/services/imageUtilities'
 import { useAppStateStore, useImageStore } from '@/services/useState'
 
 import { setDataURIFromFile } from '@/services/imageUtilities'
@@ -14,42 +13,11 @@ export function DownloadComponent() {
       onClick={() => downloadImage(fileName, extension, outputURI)}
       disabled={hasntRun}
     >
-      <DownloadSVG />
       <span>Download</span>
     </button>
   )
 }
 
-export function PresetSelectorComponent() {
-  const { setTempURI, setTempFileName } = useImageStore()
-  const { selectedPreset, setSelectedPreset } = useAppStateStore()
-
-  return (
-    <label>
-      <span className="text-gray-700">Preset Images</span>
-      <select
-        id="preset-select"
-        value={selectedPreset}
-        className="form-select border-none rounded mt-1 block text-ellipsis w-full p-3 bg-blue text-white cursor-pointer"
-        onInput={(inp) => {
-          setSelectedPreset(inp.target.value)
-          const [name, url] = inp.target.value.split('|')
-          getDataURIFromInput(url).then((uri) => setTempURI(uri))
-          setTempFileName(`example_${name}`)
-        }}
-      >
-        <option>Select a Preset</option>
-        <option value="ozen|https://i.imgur.com/Sf6sfPj.png">Ozen</option>
-        <option value="eat|https://c.tenor.com/rnhV3fu39f8AAAAM/eating-anime.gif">Eating (GIF)</option>
-        <option value="senjougahara|https://i.imgur.com/cMX8YcK.jpg">Senjougahara</option>
-        <option value="moomin|https://i.imgur.com/9I91yMq.png">Moomin</option>
-        <option value="megumin|https://i.imgur.com/BKBt6bC.png">Megumin</option>
-        <option value="aqua|https://i.imgur.com/yhIwVjZ.jpeg">Aqua</option>
-        <option value="natsumi|https://i.imgur.com/yIIl7Z1.png">Kurobe Natsumi</option>
-      </select>
-    </label>
-  )
-}
 export function UploadButtonComponent() {
   const { setTempFileName, setInputURI } = useImageStore()
   const setSelectedPreset = useAppStateStore((state) => state.setSelectedPreset)

@@ -1,8 +1,6 @@
 import { initializeONNX, upScaleFromURI } from '@/services/inference/utils'
 import { useAppStateStore, useImageStore } from '@/services/useState'
 
-import { UpscaleSVG } from '@/components/SVGComponents'
-
 const RunComponent = () => {
   const { setOutputURI, setUpscaleFactor, setTags, inputURI, extension, upscaleFactor } = useImageStore()
   const { setDownloadReady, setRunning, setErrorMessage, setLoadProg, running, loadProg } = useAppStateStore()
@@ -48,8 +46,6 @@ const RunComponent = () => {
           style={{ width: `${loadProg * 100}%`, zIndex: -1, transitionProperty: 'width' }}
         />
       )}
-
-      <UpscaleSVG />
 
       {running ? ( // Button text
         <span> Upscaling... </span>

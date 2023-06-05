@@ -17,11 +17,8 @@ const useImageStore = create((set) => ({
 
     useAppStateStore.setState({ downloadReady: false })
 
-    if (uri.slice(0, 14) == 'data:image/gif') {
-      set(() => ({ extension: 'gif' }))
-    } else {
-      set(() => ({ extension: 'png' }))
-    }
+ 
+    set(() => ({ extension: 'png' }))
   },
   setUpscaleFactor: (newFactor) => set(() => ({ upscaleFactor: Math.log2(newFactor) })),
 

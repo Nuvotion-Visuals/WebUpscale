@@ -56,13 +56,10 @@ function setDataURIFromFile(fileObj, setDataURI) {
 
   reader.onloadend = function () {
     let uri
-    if (fileObj.type === 'image/gif') {
-      uri = 'data:' + fileObj.type + ';base64,' + Buffer.from(reader.result).toString('base64')
-    } else {
-      const blob = new Blob([reader.result], { type: fileObj.type })
-      const urlCreator = window.URL || window.webkitURL
-      uri = urlCreator.createObjectURL(blob)
-    }
+  
+    const blob = new Blob([reader.result], { type: fileObj.type })
+    const urlCreator = window.URL || window.webkitURL
+    uri = urlCreator.createObjectURL(blob)
     setDataURI(uri)
   }
 }

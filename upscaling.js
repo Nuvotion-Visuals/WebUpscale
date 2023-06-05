@@ -1,11 +1,82 @@
 import * as ort from 'onnxruntime-web'
 
-import { fetchModel, imageNDarrayToDataURI, prepareImage } from './utils'
-
 import ndarray from 'ndarray'
 import ops from 'ndarray-ops'
 
 let superSession = null
+
+import pify from 'pify'
+
+const getPixels = pify(require('get-pixels'))
+const savePixels = require('save-pixels')
+const usr = require('ua-parser-js')
+
+export async function upScaleFromURI(uri, upscaleFactor) {
+  let pixels = await getPixels(uri)
+  return await multiUpscale(pixels, upscaleFactor)
+}
+
+function imageNDarrayToDataURI(data, outputType) {
+  const canvas = savePixels(data, 'canvas')
+  if (outputType == 'canvas') {
+    return canvas
+  }
+
+  return canvas.toDataURL(outputType)
+}
+
+function prepareImage(imageArray, model) {
+  const width = imageArray.shape[0]
+  const height = imageArray.shape[1]
+  if (model === 'superRes') {
+    const tensor = new ort.Tensor('uint8', imageArray.data.slice(), [width, height, 4])
+    return { input: tensor }
+  } else {
+    console.error('Invalid model type')
+    throw new Error('Invalid model type')
+  }
+}
+
+async function fetchModel(filepathOrUri, setProgress, startProgress, endProgress) {
+  const response = await fetch(filepathOrUri)
+  const reader = response.body.getReader()
+  const length = parseInt(response.headers.get('content-length'))
+  const data = new Uint8Array(length)
+  let received = 0
+
+  while (true) {
+    const { done, value } = await reader.read()
+
+    if (done) {
+      setProgress(1)
+      break
+    } 
+    else {
+      data.set(value, received)
+      received += value.length
+      setProgress(startProgress + (received / length) * (endProgress - startProgress))
+    }
+  }
+  return data.buffer
+}
+
+export async function initializeONNX(setProgress) {
+  ort.env.wasm.simd = true
+  ort.env.wasm.proxy = true
+
+  const ua = usr(navigator.userAgent)
+  if (ua.engine.name == 'WebKit') {
+    ort.env.wasm.numThreads = 1
+  } else {
+    ort.env.wasm.numThreads = Math.min(navigator.hardwareConcurrency / 2, 16)
+  }
+
+  setProgress(0)
+  await initializeSuperRes(setProgress)
+  setProgress(1)
+
+  await new Promise((resolve) => setTimeout(resolve, 300))
+}
 
 export async function runSuperRes(imageArray) {
   const feeds = prepareImage(imageArray, 'superRes')
@@ -33,26 +104,16 @@ export async function initializeSuperRes(setProgress) {
     graphOptimizationLevel: 'all',
     enableCpuMemArena: true,
     enableMemPattern: true,
-    executionMode: 'sequential', // Inter-op sequential
+    executionMode: 'sequential'
   })
 }
 
-/**
- * Upscales image pixel data using the super resolution model. The image is split
- *   into chunks of size chunkSize to avoid running out of memory on the WASM side.
- *
- * @param {ndarray} inputData Image data as pixels in a ndarray
- * @param {Number} upscaleFactor How many times to repeat the super resolution
- * @returns Upscaled image as URI
- */
+
 export async function multiUpscale(imageArray, upscaleFactor, outputType = 'image/png') {
   let outArr = imageArray
-  console.time('Upscaling')
   for (let s = 0; s < upscaleFactor; s += 1) {
     outArr = await upscaleFrame(outArr)
   }
-  console.timeEnd('Upscaling')
-
   return imageNDarrayToDataURI(outArr, outputType)
 }
 
@@ -70,7 +131,6 @@ async function upscaleFrame(imageArray) {
   const chunkH = Math.floor(inImgH / nChunksH)
 
   // Split the image in chunks and run super resolution on each chunk
-  // Time execution
   const outArr = ndarray(new Uint8Array(outImgW * outImgH * 4), [outImgW, outImgH, 4])
   for (let i = 0; i < nChunksH; i += 1) {
     for (let j = 0; j < nChunksW; j += 1) {

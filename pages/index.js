@@ -1,10 +1,62 @@
-import { useAppStateStore, useImageStore } from '@/services/useState'
-import { useEffect } from 'react'
-import { initializeONNX, upScaleFromURI } from '@/services/inference/utils'
+import { initializeONNX, upScaleFromURI } from 'upscaling'
 import Image from 'next/image'
 import { ReactCompareSlider } from 'react-compare-slider'
-import { downloadImage } from '@/services/imageUtilities'
-import { setDataURIFromFile } from '@/services/imageUtilities'
+import { create } from 'zustand'
+
+const useImageStore = create((set) => ({
+  inputURI: './images/colorful-reaction-diffusion.png', // Input image URI
+  outputURI: './images/colorful-reaction-diffusion_2x.png', // Output image URI
+  fileName: 'example', // Output file name
+  extension: 'png', // Output file extension
+  upscaleFactor: 1, // Upscale factor (will be automatically log2'd)
+  hasntRun: true, // Upscale factor (will be automatically log2'd)
+  tempURI: './images/colorful-reaction-diffusion.png',
+  tempFileName: 'example',
+
+  setInputURI: (uri) => {
+    set(() => ({ inputURI: uri }))
+    set(() => ({ outputURI: null }))
+    set(() => ({ hasntRun: true }))
+
+    useAppStateStore.setState({ downloadReady: false })
+
+ 
+    set(() => ({ extension: 'png' }))
+  },
+  setUpscaleFactor: (newFactor) => set(() => ({ upscaleFactor: Math.log2(newFactor) })),
+
+  setOutputURI: (uri) => {
+    set(() => ({ outputURI: uri }))
+    set(() => ({ hasntRun: false }))
+  },
+  setFileName: (newFilename) => set(() => ({ fileName: newFilename })),
+  setTempURI: (newTempUri) => set(() => ({ tempURI: newTempUri })),
+  setTempFileName: (newTempFileName) => set(() => ({ tempFileName: newTempFileName })),
+}))
+
+const useAppStateStore = create((set) => ({
+  loadProg: -1, // Progress of model loading
+
+  inputModalOpen: false, // Flag indicating if input modal is open
+  mobile: false, // Are we on a mobile aspect ratio?
+  errorMessage: null, // Error message to display
+  running: false, // Flag indicating if we should run the model, fires a useEffect
+  downloadReady: false, // Flag indicating upscale is ready for download
+  feedbackMessage: null,
+  isUploading: false,
+  selectedPreset: 'none',
+
+  setInputModalOpen: (newInputModalOpen) => set(() => ({ inputModalOpen: newInputModalOpen })),
+  setMobile: (newMobile) => set(() => ({ mobile: newMobile })),
+  setErrorMessage: (newError) => set(() => ({ errorMessage: newError })),
+  setRunning: (newRunning) => set(() => ({ running: newRunning })),
+  setLoadProg: (newProg) => set(() => ({ loadProg: newProg })),
+  setDownloadReady: (newDownloadReady) => set(() => ({ downloadReady: newDownloadReady })),
+  setFeedbackMessage: (newFeedbackMessage) => set(() => ({ feedbackMessage: newFeedbackMessage })),
+  setIsUploading: (newIsUploading) => set(() => ({ isUploading: newIsUploading })),
+  setSelectedPreset: (newSelectedPreset) => set(() => ({ selectedPreset: newSelectedPreset })),
+}))
+
 
 const ImageDisplay = () => {
   const { inputURI, outputURI } = useImageStore()
@@ -32,7 +84,15 @@ export function DownloadComponent() {
   const { fileName, extension, outputURI, hasntRun } = useImageStore()
 
   return (
-    <button onClick={() => downloadImage(fileName, extension, outputURI)} disabled={hasntRun}>
+    <button 
+      onClick={() => {
+        const link = document.createElement('a')
+        link.download = `${fileName}.${extension}`
+        link.href = outputURI
+        link.click()
+      }} 
+      disabled={hasntRun}
+    >
       <span>Download</span>
     </button>
   )
@@ -46,17 +106,22 @@ export function UploadButtonComponent() {
     <button id="upload-button" type="button">
         <input
           type="file"
-          onInput={(e) => {
-            if (e.target.files[0]) {
-              setDataURIFromFile(e.target.files[0], setInputURI)
-              setTempFileName(e.target.files[0].name.split('.')[0])
-              setSelectedPreset('')
-            }
-          }}
           onChange={(e) => {
             if (e.target.files[0]) {
-              setDataURIFromFile(e.target.files[0], setInputURI)
-              setTempFileName(e.target.files[0].name.split('.')[0])
+              const fileObj = e.target.files[0]
+              const reader = new FileReader()
+              reader.readAsArrayBuffer(fileObj)
+
+              reader.onloadend = function () {
+                let uri
+              
+                const blob = new Blob([reader.result], { type: fileObj.type })
+                const urlCreator = window.URL || window.webkitURL
+                uri = urlCreator.createObjectURL(blob)
+                setInputURI(uri)
+              }
+
+              setTempFileName(fileObj.name.split('.')[0])
               setSelectedPreset('')
             }
           }}
@@ -82,7 +147,7 @@ const RunComponent = () => {
             setRunning(true)
           })
           .then(() => {
-            upScaleFromURI(extension, inputURI, upscaleFactor)
+            upScaleFromURI(inputURI, upscaleFactor)
               .then((result) => {
                 setOutputURI(result)
               })

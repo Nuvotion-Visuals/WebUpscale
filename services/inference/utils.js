@@ -1,11 +1,9 @@
 import * as ort from 'onnxruntime-web'
 
 import { initializeSuperRes, multiUpscale } from '@/services/inference/upscaling'
-import { initializeTagger, runTagger } from '@/services/inference/tagging'
 
 import { doGif } from '@/services/gifUtilities'
 import ndarray from 'ndarray'
-import ops from 'ndarray-ops'
 import pify from 'pify'
 
 const getPixels = pify(require('get-pixels'))
@@ -77,11 +75,6 @@ export function prepareImage(imageArray, model) {
   if (model === 'superRes') {
     const tensor = new ort.Tensor('uint8', imageArray.data.slice(), [width, height, 4])
     return { input: tensor }
-  } else if (model === 'tagger') {
-    const newND = ndarray(new Uint8Array(width * height * 3), [1, 3, height, width])
-    ops.assign(newND.pick(0, null, null), imageArray.lo(0, 0, 0).hi(width, height, 3).transpose(2, 1, 0))
-    const tensor = new ort.Tensor('uint8', newND.data.slice(), [1, 3, height, width])
-    return { input: tensor }
   } else {
     console.error('Invalid model type')
     throw new Error('Invalid model type')
@@ -124,7 +117,6 @@ export async function initializeONNX(setProgress) {
   }
 
   setProgress(0)
-  await initializeTagger(setProgress)
   await initializeSuperRes(setProgress)
   setProgress(1)
 
@@ -133,19 +125,17 @@ export async function initializeONNX(setProgress) {
   await sleep(300)
 }
 
-export async function upScaleFromURI(extension, setTags, uri, upscaleFactor) {
+export async function upScaleFromURI(extension, uri, upscaleFactor) {
   let resultURI = null
   if (extension == 'gif') {
     let currentURI = uri
     for (let s = 0; s < upscaleFactor; s += 1) {
-      currentURI = await doGif(currentURI, setTags)
+      currentURI = await doGif(currentURI)
     }
 
     resultURI = currentURI
   } else {
     const imageArray = await imageToNdarray(uri)
-    const tags = await runTagger(imageArray)
-    setTags(tags)
 
     resultURI = await multiUpscale(imageArray, upscaleFactor)
   }

@@ -70,7 +70,7 @@ export function UploadButtonComponent() {
 }
 
 const RunComponent = () => {
-  const { setOutputURI, setUpscaleFactor, setTags, inputURI, extension, upscaleFactor } = useImageStore()
+  const { setOutputURI, setUpscaleFactor, inputURI, extension, upscaleFactor } = useImageStore()
   const { setDownloadReady, setRunning, setErrorMessage, setLoadProg, running, loadProg } = useAppStateStore()
 
   const modelLoading = loadProg >= 0
@@ -83,7 +83,7 @@ const RunComponent = () => {
             setRunning(true)
           })
           .then(() => {
-            upScaleFromURI(extension, setTags, inputURI, upscaleFactor)
+            upScaleFromURI(extension, inputURI, upscaleFactor)
               .then((result) => {
                 setOutputURI(result)
               })

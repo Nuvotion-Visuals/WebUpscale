@@ -3,11 +3,10 @@ import { multiUpscale } from '@/services/inference/upscaling'
 import ndarray from 'ndarray'
 import ops from 'ndarray-ops'
 import { parseGIF } from 'gifuct-js'
-import { runTagger } from '@/services/inference/tagging'
 
 const GIFEncoder = require('gif-encoder-2')
 
-export async function doGif(inputURI, setTags) {
+export async function doGif(inputURI) {
   const allFrames = await imageToNdarray(inputURI)
   const [N, W, H, _C] = allFrames.shape
 
@@ -21,9 +20,6 @@ export async function doGif(inputURI, setTags) {
 
   for (let i = 0; i < N; i++) {
     const lr = sliceFrame(allFrames, i)
-    if (i == 0) {
-      setTags(await runTagger(lr))
-    }
 
     const sr = await multiUpscale(lr, 1, 'canvas')
     const ctx = sr.getContext('2d')

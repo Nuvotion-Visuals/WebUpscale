@@ -1,10 +1,8 @@
 import { create } from 'zustand'
-import default_tags from '@/services/landing_tags'
 
 const useImageStore = create((set) => ({
   inputURI: './images/colorful-reaction-diffusion.png', // Input image URI
   outputURI: './images/colorful-reaction-diffusion_2x.png', // Output image URI
-  tags: default_tags, // Tags returned by tagger network
   fileName: 'example', // Output file name
   extension: 'png', // Output file extension
   upscaleFactor: 1, // Upscale factor (will be automatically log2'd)
@@ -31,7 +29,6 @@ const useImageStore = create((set) => ({
     set(() => ({ outputURI: uri }))
     set(() => ({ hasntRun: false }))
   },
-  setTags: (newTags) => set(() => ({ tags: newTags })),
   setFileName: (newFilename) => set(() => ({ fileName: newFilename })),
   setTempURI: (newTempUri) => set(() => ({ tempURI: newTempUri })),
   setTempFileName: (newTempFileName) => set(() => ({ tempFileName: newTempFileName })),

@@ -1,0 +1,17 @@
+{
+  "theme_color": "#121212",
+  "background_color": "#121212",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "name": "WebUpscale",
+  "short_name": "WebUpscale",
+  "description": "Free unlimited image upscaling in your browser using AI.",
+  "icons": [
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

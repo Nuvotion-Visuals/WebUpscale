@@ -12,6 +12,7 @@ export default function Main() {
   const [hasntRun, setHasntRun] = useState(true)
   const [loadProg, setLoadProg] = useState(-1)
   const [running, setRunning] = useState(false)
+  const [complete, setComplete] = useState(false)
 
   const setInputURIHandler = (uri) => {
     setInputURI(uri)
@@ -36,17 +37,18 @@ export default function Main() {
       {
         outputURI == null 
           ? <Image src={inputURI} width='512' height='512'/>
-          : <ReactCompareSlider
-              position={50}
-              itemOne={<Image width='512' height='512' src={inputURI} />}
-              itemTwo={<Image width='512' height='512' src={outputURI} />}
-            />
+          : <div style={{width: '512px'}}>
+              <ReactCompareSlider
+                position={50}
+                itemOne={<Image width='512' height='512' src={inputURI} />}
+                itemTwo={<Image width='512' height='512' src={outputURI} />}
+              />
+            </div>
       }
       {
         outputURI != null 
           ? 
             <div>
-              <button type='button'>
                 <input
                   type='file'
                   onChange={(e) => {
@@ -65,24 +67,13 @@ export default function Main() {
                   }}
                   onClick={e => e.target.value = null}
                 />
-              </button>
-              <button
-                onClick={() => {
-                  const link = document.createElement('a')
-                  link.download = `${fileName}.${extension}`
-                  link.href = outputURI
-                  link.click()
-                }}
-                disabled={hasntRun}
-              >
-                Download
-              </button>
             </div>
           : <div>
               <button
                 disabled={modelLoading || running}
                 onClick={() => {
                   setLoadProg(0)
+                  setComplete(false)
                   initialize(setLoadProg)
                     .then(() => setRunning(true))
                     .then(() => upscale(inputURI, upscaleFactor)
@@ -90,6 +81,7 @@ export default function Main() {
                       .catch(error => setErrorMessage(error))
                       .finally(() => {
                         setRunning(false)
+                        setComplete(true)
                         setUpscaleFactorHandler(2)
                       })
                     )
@@ -98,11 +90,7 @@ export default function Main() {
                 }}
               >
                 {
-                  running 
-                    ? 'Upscaling...'
-                    : !modelLoading 
-                        ? 'Upscale'
-                        : 'Loading Model'
+                  running ? 'Upscaling...' : !modelLoading ? 'Upscale' : 'Loading Model'
                 }
               </button>
               <select
@@ -114,6 +102,19 @@ export default function Main() {
                 <option value='8'>8X</option>
               </select>
             </div>
+      }
+      {
+        complete && <button
+          onClick={() => {
+            const link = document.createElement('a')
+            link.download = `${fileName}.${extension}`
+            link.href = outputURI
+            link.click()
+          }}
+          disabled={hasntRun}
+        >
+          Download
+        </button>
       }
     </div>
   )

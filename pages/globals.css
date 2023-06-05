@@ -1,0 +1,8 @@
+body {
+    background: black;
+    color: #eee;
+}
+
+button, select {
+    border: none;
+}

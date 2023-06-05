@@ -30,19 +30,17 @@ export async function initializeONNX(setProgress) {
 }
 
 export async function upScaleFromURI(uri, upscaleFactor) {
-  let pixels = await getPixels(uri)
-  return await multiUpscale(pixels, upscaleFactor)
-}
-
-function imageNDarrayToDataURI(data, outputType) {
-  const canvas = savePixels(data, 'canvas')
-  if (outputType == 'canvas') {
-    return canvas
+  let pixels = await getPixels(uri);
+  
+  let outArr = pixels;
+  
+  for (let s = 0; s < upscaleFactor; s += 1) {
+    outArr = await upscaleFrame(outArr);
   }
-
-  return canvas.toDataURL(outputType)
+  
+  const canvas = savePixels(outArr, 'canvas');
+  return canvas.toDataURL('image/png');
 }
-
 
 async function fetchModel(filepathOrUri, setProgress, startProgress, endProgress) {
   const response = await fetch(filepathOrUri)
@@ -98,14 +96,6 @@ async function initializeSuperRes(setProgress) {
     enableMemPattern: true,
     executionMode: 'sequential'
   })
-}
-
-async function multiUpscale(imageArray, upscaleFactor, outputType = 'image/png') {
-  let outArr = imageArray
-  for (let s = 0; s < upscaleFactor; s += 1) {
-    outArr = await upscaleFrame(outArr)
-  }
-  return imageNDarrayToDataURI(outArr, outputType)
 }
 
 async function upscaleFrame(imageArray) {

@@ -11,20 +11,17 @@ const ImageDisplay = () => {
   const { inputURI, outputURI } = useImageStore()
 
   return (
-    <div
-      id="image-display-container"
-      className={`items-center flex justify-center drop-shadow-md overflow-hidden ml-5 mr-5 w-auto md:w-full`}
-    >
+    <div id="image-display-container">
       {outputURI == null ? (
-        <Image src={inputURI} width="1" height="1" id="stock-image" className="z-0" priority={true} alt="Before image" />
+        <Image src={inputURI} width="1" height="1" id="stock-image" priority={true} alt="Before image" />
       ) : (
         <ReactCompareSlider
           position={50}
           itemOne={
-            <Image width="500" height="500" src={inputURI} id="before-image" className="z-0" priority={true} alt="Before image" />
+            <Image width="500" height="500" src={inputURI} id="before-image" priority={true} alt="Before image" />
           }
           itemTwo={
-            <Image width="500" height="500" src={outputURI} id="after-image" className="z-0" priority={true} alt="After image" />
+            <Image width="500" height="500" src={outputURI} id="after-image" priority={true} alt="After image" />
           }
         />
       )}
@@ -32,17 +29,11 @@ const ImageDisplay = () => {
   )
 }
 
-
 export function DownloadComponent() {
   const { fileName, extension, outputURI, hasntRun } = useImageStore()
 
   return (
-    <button
-      className={`text-white h-12 mt-1 font-bold py-2 px-2 rounded drop-shadow-lg bg-pink inline-flex items-center disabled:bg-gray-400 disabled:opacity-60 disabled:text-white disabled:cursor-not-allowed
-        ${hasntRun ? '' : 'animate-pulse'}`}
-      onClick={() => downloadImage(fileName, extension, outputURI)}
-      disabled={hasntRun}
-    >
+    <button onClick={() => downloadImage(fileName, extension, outputURI)} disabled={hasntRun}>
       <span>Download</span>
     </button>
   )
@@ -53,17 +44,11 @@ export function UploadButtonComponent() {
   const setSelectedPreset = useAppStateStore((state) => state.setSelectedPreset)
 
   return (
-    <div className="grid grid-cols-1">
-      <button
-        id="upload-button"
-        type="button"
-        className="relative mt-1 rounded right-0 bottom-0 text-white shadow-sm px-2 py-1
-text-base font-medium h-12 border-blue border-2 bg-blue disabled:bg-white disabled:text-gray-200 disabled:border-gray-200"
-      >
-        <label className="absolute left-0 top-0 w-full h-full cursor-pointer">
+    <div>
+      <button id="upload-button" type="button">
+        <label>
           <input
             type="file"
-            className="hidden"
             onInput={(e) => {
               if (e.target.files[0]) {
                 setDataURIFromFile(e.target.files[0], setInputURI)
@@ -89,7 +74,6 @@ text-base font-medium h-12 border-blue border-2 bg-blue disabled:bg-white disabl
   )
 }
 
-
 const RunComponent = () => {
   const { setOutputURI, setUpscaleFactor, setTags, inputURI, extension, upscaleFactor } = useImageStore()
   const { setDownloadReady, setRunning, setErrorMessage, setLoadProg, running, loadProg } = useAppStateStore()
@@ -97,10 +81,7 @@ const RunComponent = () => {
   const modelLoading = loadProg >= 0
 
   return (
-    <button
-      className="grow text-white font-bold py-2 px-4 overflow-hidden rounded drop-shadow-lg bg-pink inline-flex items-center disabled:bg-gray-400 disabled:opacity-60 disabled:text-white disabled:cursor-not-allowed"
-      disabled={modelLoading || running}
-      onClick={() => {
+    <button disabled={modelLoading || running} onClick={() => {
         setLoadProg(0)
         initializeONNX(setLoadProg)
           .then(() => {
@@ -128,15 +109,11 @@ const RunComponent = () => {
           })
       }}
     >
-      {modelLoading && ( // Model downloading progress displayed underneath button
-        <div
-          id="upscale-button-bg"
-          className="bg-litepink absolute h-full left-0 rounded duration-300"
-          style={{ width: `${loadProg * 100}%`, zIndex: -1, transitionProperty: 'width' }}
-        />
+      {modelLoading && (
+        <div id="upscale-button-bg" style={{ width: `${loadProg * 100}%`, zIndex: -1, transitionProperty: 'width' }}/>
       )}
 
-      {running ? ( // Button text
+      {running ? (
         <span> Upscaling... </span>
       ) : !modelLoading ? (
         <span> Upscale </span>
@@ -147,7 +124,6 @@ const RunComponent = () => {
   )
 }
 
-
 function UpscaleFactorComponent() {
   const setUpscaleFactor = useImageStore((state) => state.setUpscaleFactor)
   const running = useAppStateStore((state) => state.running)
@@ -155,7 +131,6 @@ function UpscaleFactorComponent() {
   return (
     <select
       id="resolution-select"
-      className="form-select appearance-none border-none text-white font-bold py-2 px-4 rounded drop-shadow-lg bg-pink inline-flex items-center w-16 disabled:bg-gray-400 disabled:opacity-60 disabled:text-white disabled:cursor-not-allowed"
       onInput={(inp) => {
         setUpscaleFactor(parseInt(inp.target.value))
       }}
@@ -168,7 +143,6 @@ function UpscaleFactorComponent() {
   )
 }
 
-
 export default function Main() {
   const size = useWindowSize()
   const setMobile = useAppStateStore((state) => state.setMobile)
@@ -179,23 +153,22 @@ export default function Main() {
   }, [size])
 
   return (
-    <div className="h-fit overflow-hidden">
-      <div className="grid grid-flow-col gap-1 ml-1 mr-1 justify-center mb-2"></div>
-      <div className="mb-2">
+    <div>
+      <div></div>
+      <div>
         <ImageDisplay />
       </div>
       {outputURI != null ? (
-        <div className="grid grid-flow-col gap-1 ml-1 mr-1 justify-center">
+        <div>
           <UploadButtonComponent />
           <DownloadComponent />
         </div>
       ) : (
-        <div className="grid grid-flow-col gap-1 ml-1 mr-1 justify-center">
+        <div>
           <RunComponent />
           <UpscaleFactorComponent />
         </div>
       )}
-    
     </div>
   )
 }

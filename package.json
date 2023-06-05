@@ -1,14 +1,11 @@
 {
-  "private": true,
   "scripts": {
     "dev": "next",
     "build": "next build",
     "start": "next start -p 3001",
-    "export": "next export",
-    "cloudflare_deploy": "npm run build && npm run export"
+    "export": "next export"
   },
   "dependencies": {
-    "@ramonak/react-progress-bar": "^5.0.3",
     "get-pixels": "^3.3.3",
     "ndarray-ops": "^1.2.2",
     "next": "^13.2.4",
@@ -20,8 +17,7 @@
     "react-compare-slider": "2.2.0",
     "react-dom": "^18.2.0",
     "save-pixels": "^2.3.6",
-    "ua-parser-js": "^1.0.35",
-    "zustand": "^4.3.7"
+    "ua-parser-js": "^1.0.35"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",

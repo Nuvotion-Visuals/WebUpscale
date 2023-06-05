@@ -44,33 +44,28 @@ export function UploadButtonComponent() {
   const setSelectedPreset = useAppStateStore((state) => state.setSelectedPreset)
 
   return (
-    <div>
-      <button id="upload-button" type="button">
-        <label>
-          <input
-            type="file"
-            onInput={(e) => {
-              if (e.target.files[0]) {
-                setDataURIFromFile(e.target.files[0], setInputURI)
-                setTempFileName(e.target.files[0].name.split('.')[0])
-                setSelectedPreset('')
-              }
-            }}
-            onChange={(e) => {
-              if (e.target.files[0]) {
-                setDataURIFromFile(e.target.files[0], setInputURI)
-                setTempFileName(e.target.files[0].name.split('.')[0])
-                setSelectedPreset('')
-              }
-            }}
-            onClick={(e) => {
-              e.target.value = null
-            }}
-          />
-        </label>
-        Upload
-      </button>
-    </div>
+    <button id="upload-button" type="button">
+        <input
+          type="file"
+          onInput={(e) => {
+            if (e.target.files[0]) {
+              setDataURIFromFile(e.target.files[0], setInputURI)
+              setTempFileName(e.target.files[0].name.split('.')[0])
+              setSelectedPreset('')
+            }
+          }}
+          onChange={(e) => {
+            if (e.target.files[0]) {
+              setDataURIFromFile(e.target.files[0], setInputURI)
+              setTempFileName(e.target.files[0].name.split('.')[0])
+              setSelectedPreset('')
+            }
+          }}
+          onClick={(e) => {
+            e.target.value = null
+          }}
+        />
+    </button>
   )
 }
 

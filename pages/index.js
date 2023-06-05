@@ -1,120 +1,139 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { initialize, upscale } from 'upscale'
 import Image from 'next/image'
 import { ReactCompareSlider } from 'react-compare-slider'
 
 export default function Main() {
-  const [inputURI, setInputURI] = useState('./images/colorful-reaction-diffusion.png')
-  const [outputURI, setOutputURI] = useState('./images/colorful-reaction-diffusion_2x.png')
-  const [fileName, setFileName] = useState('example')
-  const [extension, setExtension] = useState('png')
+  const [inputURIQueue, setInputURIQueue] = useState([])
+  const [outputURIQueue, setOutputURIQueue] = useState([])
+  const [fileNameQueue, setFileNameQueue] = useState([])
+  const [displayFileNameQueue, setDisplayFileNameQueue] = useState([]) 
+  const [displayInputURIQueue, setDisplayInputURIQueue] = useState([]) 
+  const [statusQueue, setStatusQueue] = useState([]) 
+  const [extensionQueue, setExtensionQueue] = useState([])
   const [upscaleFactor, setUpscaleFactor] = useState(1)
-  const [hasntRun, setHasntRun] = useState(true)
   const [loadProg, setLoadProg] = useState(-1)
-  const [running, setRunning] = useState(false)
-  const [complete, setComplete] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [activeProcessIndex, setActiveProcessIndex] = useState(0) 
 
-  const setInputURIHandler = (uri) => {
-    setInputURI(uri)
-    setOutputURI(null)
-    setHasntRun(true)
-    setExtension('png')
+  useEffect(() => {
+    if (statusQueue[activeProcessIndex] === 'Queued' && loadProg === -1) {
+      upscaleImage(inputURIQueue[activeProcessIndex], activeProcessIndex)
+    }
+  }, [inputURIQueue, activeProcessIndex, loadProg, statusQueue])
+
+  const upscaleImage = (inputURI, index) => {
+    setLoadProg(0)
+    setStatusQueue(prevQueue => {
+      const newQueue = [...prevQueue]
+      newQueue[index] = 'Processing'
+      return newQueue
+    })
+    initialize(setLoadProg)
+      .then(() => upscale(inputURI, upscaleFactor)
+        .then(result => {
+          setOutputURIQueue(prevQueue => {
+            const newQueue = [...prevQueue]
+            newQueue[index] = result
+            return newQueue
+          })
+          setStatusQueue(prevQueue => {
+            const newQueue = [...prevQueue]
+            newQueue[index] = 'Completed'
+            return newQueue
+          })
+          setLoadProg(-1)
+          if (activeProcessIndex < inputURIQueue.length - 1) {
+            setActiveProcessIndex(prevIndex => prevIndex + 1)
+          }
+        })
+        .catch(error => {
+          setStatusQueue(prevQueue => {
+            const newQueue = [...prevQueue]
+            newQueue[index] = 'Error: ' + error.message
+            return newQueue
+          })
+          setLoadProg(-1)
+        })
+      )
+      .catch(() => {
+        setStatusQueue(prevQueue => {
+          const newQueue = [...prevQueue]
+          newQueue[index] = 'Error: Could not load model.'
+          return newQueue
+        })
+        setLoadProg(-1)
+      })
   }
 
-  const setUpscaleFactorHandler = (newFactor) => {
-    setUpscaleFactor(Math.log2(newFactor))
-  }
+  const fileUploadHandler = (e) => {
+    for (let i = 0; i < e.target.files.length; i++) {
+      const fileObj = e.target.files[i];
+      setFileNameQueue(prevQueue => [...prevQueue, fileObj.name])
+      setDisplayFileNameQueue(prevQueue => [...prevQueue, fileObj.name]) 
+      const reader = new FileReader()
+      reader.readAsArrayBuffer(fileObj)
 
-  const setOutputURIHandler = (uri) => {
-    setOutputURI(uri)
-    setHasntRun(false)
+      reader.onloadend = () => {
+        const blob = new Blob([reader.result], { type: fileObj.type })
+        const urlCreator = window.URL || window.webkitURL
+        const objectURL = urlCreator.createObjectURL(blob)
+        setInputURIQueue(prevQueue => [...prevQueue, objectURL])
+        setDisplayInputURIQueue(prevQueue => [...prevQueue, objectURL])
+        setStatusQueue(prevQueue => [...prevQueue, 'Queued'])
+        setExtensionQueue(prevQueue => [...prevQueue, fileObj.name.split('.').pop()])
+        setOutputURIQueue(prevQueue => [...prevQueue, null])
+      }
+    }
   }
-
-  const modelLoading = loadProg >= 0
 
   return (
     <div>
       {
-        outputURI == null 
-          ? <Image src={inputURI} width='512' height='512'/>
-          : <div style={{width: '512px'}}>
+        outputURIQueue[activeIndex] 
+          ? <div style={{width: '512px'}}>
               <ReactCompareSlider
                 position={50}
-                itemOne={<Image width='512' height='512' src={inputURI} />}
-                itemTwo={<Image width='512' height='512' src={outputURI} />}
+                itemOne={<Image width='512' height='512' src={displayInputURIQueue[activeIndex]} />}
+                itemTwo={<Image width='512' height='512' src={outputURIQueue[activeIndex]} />}
               />
             </div>
+          : <Image src={displayInputURIQueue[activeIndex]} width='512' height='512'/>
       }
+      <input
+        type='file'
+        onChange={fileUploadHandler}
+        onClick={e => e.target.value = null}
+        multiple
+      />
+      <button
+        onClick={() => {
+          if (statusQueue.length > 0) {
+            setActiveProcessIndex(0)
+          }
+        }}
+      >
+        Start
+      </button>
       {
-        outputURI != null 
-          ? 
-            <div>
-                <input
-                  type='file'
-                  onChange={(e) => {
-                    if (e.target.files[0]) {
-                      const fileObj = e.target.files[0]
-                      setFileName(fileObj.name)
-                      const reader = new FileReader()
-                      reader.readAsArrayBuffer(fileObj)
-
-                      reader.onloadend = () => {
-                        const blob = new Blob([reader.result], { type: fileObj.type })
-                        const urlCreator = window.URL || window.webkitURL
-                        setInputURIHandler(urlCreator.createObjectURL(blob))
-                      }
-                    }
-                  }}
-                  onClick={e => e.target.value = null}
-                />
-            </div>
-          : <div>
-              <button
-                disabled={modelLoading || running}
-                onClick={() => {
-                  setLoadProg(0)
-                  setComplete(false)
-                  initialize(setLoadProg)
-                    .then(() => setRunning(true))
-                    .then(() => upscale(inputURI, upscaleFactor)
-                      .then(result => setOutputURIHandler(result))
-                      .catch(error => setErrorMessage(error))
-                      .finally(() => {
-                        setRunning(false)
-                        setComplete(true)
-                        setUpscaleFactorHandler(2)
-                      })
-                    )
-                    .catch(() => setErrorMessage('Could not load model.'))
-                    .finally(() => setLoadProg(-1))
-                }}
-              >
-                {
-                  running ? 'Upscaling...' : !modelLoading ? 'Upscale' : 'Loading Model'
-                }
+        displayFileNameQueue.map((fileName, index) => (
+          <div key={index} onClick={() => setActiveIndex(index)}>
+            <img src={displayInputURIQueue[index]} width="50" height="50" /> 
+            {fileName} - {statusQueue[index]}
+            {statusQueue[index] === 'Processing' && <progress />}
+            {statusQueue[index] === 'Completed' && 
+              <button onClick={(e) => {
+                e.stopPropagation();  // to prevent setActiveIndex
+                const link = document.createElement('a')
+                link.download = `${fileNameQueue[index]}.${extensionQueue[index]}`
+                link.href = outputURIQueue[index]
+                link.click()
+              }}>
+                Download
               </button>
-              <select
-                onInput={inp => setUpscaleFactorHandler(parseInt(inp.target.value))}
-                disabled={running}
-              >
-                <option value='2'>2X</option>
-                <option value='4'>4X</option>
-                <option value='8'>8X</option>
-              </select>
-            </div>
-      }
-      {
-        complete && <button
-          onClick={() => {
-            const link = document.createElement('a')
-            link.download = `${fileName}.${extension}`
-            link.href = outputURI
-            link.click()
-          }}
-          disabled={hasntRun}
-        >
-          Download
-        </button>
+            }
+          </div>
+        ))
       }
     </div>
   )

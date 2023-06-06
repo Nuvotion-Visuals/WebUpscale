@@ -6,158 +6,122 @@ import styled from 'styled-components'
 import Droppable from '@/components/Droppable'
 
 export default function Main() {
-  const [inputURIQueue, setInputURIQueue] = useState([])
-  const [outputURIQueue, setOutputURIQueue] = useState([])
-  const [fileNameQueue, setFileNameQueue] = useState([])
-  const [displayFileNameQueue, setDisplayFileNameQueue] = useState([]) 
-  const [displayInputURIQueue, setDisplayInputURIQueue] = useState([]) 
-  const [statusQueue, setStatusQueue] = useState([]) 
-  const [extensionQueue, setExtensionQueue] = useState([])
+  const [upscaleQueue, setUpscaleQueue] = useState([])
   const [upscaleFactor, setUpscaleFactor] = useState(1)
   const [loadProg, setLoadProg] = useState(-1)
   const [activeIndex, setActiveIndex] = useState(0)
-  const [activeProcessIndex, setActiveProcessIndex] = useState(null) 
+  const [activeProcessIndex, setActiveProcessIndex] = useState(null)
   const [progress, setProgress] = useState(0)
-  
+  const [dataLoaded, setDataLoaded] = useState(false)
 
   useEffect(() => {
-    if (statusQueue[activeProcessIndex] === 'Queued' && loadProg === -1) {
-      upscaleImage(inputURIQueue[activeProcessIndex], activeProcessIndex)
+    if (upscaleQueue[activeProcessIndex]?.status === 'Queued' && loadProg === -1) {
+      upscaleImage(activeProcessIndex)
     }
-  }, [inputURIQueue, activeProcessIndex, loadProg, statusQueue])
+  }, [upscaleQueue, activeProcessIndex, loadProg])
 
-  // New state to track if the data has been loaded from localForage
-const [dataLoaded, setDataLoaded] = useState(false)
-
-useEffect(() => {
-  async function fetchData() {
-      const inputFiles = await localForage.getItem('inputFiles')
-      const outputURIs = await localForage.getItem('outputURIs')
-      const fileNames = await localForage.getItem('fileNames')
-      const displayFileNames = await localForage.getItem('displayFileNames')
-      const displayInputURIs = await localForage.getItem('displayInputURIs')
-      const statuses = await localForage.getItem('statuses')
-      const extensions = await localForage.getItem('extensions')
-
-      if (inputFiles && outputURIs && fileNames && displayFileNames && displayInputURIs && statuses && extensions) {
-          // Reset any 'Processing' status to 'Queued'
-          const resetStatuses = statuses.map(status => status === 'Processing' ? 'Queued' : status)
-
-          setInputURIQueue(inputFiles)
-          setOutputURIQueue(outputURIs)
-          setFileNameQueue(fileNames)
-          setDisplayFileNameQueue(displayFileNames)
-          setDisplayInputURIQueue(displayInputURIs)
-          setStatusQueue(resetStatuses)
-          setExtensionQueue(extensions)
+  useEffect(() => {
+    async function fetchData() {
+      const savedQueue = await localForage.getItem('upscaleQueue')
+      if (savedQueue) {
+        const queue = savedQueue.map(item => {
+          if (item.status === 'Processing') {
+            item.status = 'Queued'
+          }
+          return item
+        })
+        setUpscaleQueue(queue)
       }
-      setDataLoaded(true)  // Move this line outside the if block
-  }
-  fetchData()
-}, [])
+      setDataLoaded(true)
+    }
+    fetchData()
+  }, [])
 
+  useEffect(() => {
+    if (dataLoaded) {
+      localForage.setItem('upscaleQueue', upscaleQueue)
+    }
+  }, [dataLoaded, upscaleQueue])
 
-useEffect(() => {
-  // Check if the data has been loaded before persisting
-  if (dataLoaded) {
-      localForage.setItem('inputFiles', inputURIQueue)  // Persist File objects
-      localForage.setItem('outputURIs', outputURIQueue)
-      localForage.setItem('fileNames', fileNameQueue)
-      localForage.setItem('displayFileNames', displayFileNameQueue)
-      localForage.setItem('displayInputURIs', displayInputURIQueue)
-      localForage.setItem('statuses', statusQueue)
-      localForage.setItem('extensions', extensionQueue)
-  }
-}, [dataLoaded, inputURIQueue, outputURIQueue, fileNameQueue, displayFileNameQueue, displayInputURIQueue, statusQueue, extensionQueue])
-
-
-const upscaleImage = async (inputFile, index) => {
-  setLoadProg(0)
-  setStatusQueue(prevQueue => {
-    const newQueue = [...prevQueue]
-    newQueue[index] = 'Processing'
-    return newQueue
-  })
-  initialize(setLoadProg)
-    .then(() => {
+  const upscaleImage = async (index) => {
+    setLoadProg(0)
+    setUpscaleQueue(prevQueue => {
+      const newQueue = [...prevQueue]
+      newQueue[index].status = 'Processing'
+      return newQueue
+    })
+    initialize(setLoadProg)
+      .then(() => {
         const reader = new FileReader();
         reader.onload = async function(e) {
           try {
             const result = await upscale(reader.result, upscaleFactor, newProgress => setProgress(newProgress))
-            setOutputURIQueue(prevQueue => {
+            setUpscaleQueue(prevQueue => {
               const newQueue = [...prevQueue]
-              newQueue[index] = result
-              return newQueue
-            })
-            setStatusQueue(prevQueue => {
-              const newQueue = [...prevQueue]
-              newQueue[index] = 'Completed'
+              newQueue[index].outputURI = result
+              newQueue[index].status = 'Completed'
               return newQueue
             })
           } catch(error) {
-            setStatusQueue(prevQueue => {
+            setUpscaleQueue(prevQueue => {
               const newQueue = [...prevQueue]
-              newQueue[index] = 'Error: ' + error
+              newQueue[index].status = 'Error: ' + error
               return newQueue
             })
           }
         };
-        reader.readAsDataURL(inputFile);  // Convert the File object to a Data URL
-    })
-    .catch(() => setStatusQueue(prevQueue => {
-      const newQueue = [...prevQueue]
-      newQueue[index] = 'Could not load model.'
-      return newQueue
-    }))
-    .finally(() => {
-      setLoadProg(-1)
-      if (activeProcessIndex < inputURIQueue.length - 1) {
-        setActiveProcessIndex(activeProcessIndex + 1)
-      } else {
-        setActiveProcessIndex(null)
-      }
-    })
-}
-
+        reader.readAsDataURL(upscaleQueue[index].inputFile);
+      })
+      .catch(() => setUpscaleQueue(prevQueue => {
+        const newQueue = [...prevQueue]
+        newQueue[index].status = 'Could not load model.'
+        return newQueue
+      }))
+      .finally(() => {
+        setLoadProg(-1)
+        if (activeProcessIndex < upscaleQueue.length - 1) {
+          setActiveProcessIndex(activeProcessIndex + 1)
+        } else {
+          setActiveProcessIndex(null)
+        }
+      })
+  }
 
   const fileUploadHandler = (files) => {
     if (files[0]) {
       let fileObjects = Array.from(files)
       fileObjects.forEach(fileObj => {
-        setInputURIQueue(prevQueue => [fileObj, ...prevQueue])  // Directly store the File object
-        setOutputURIQueue(prevQueue => [null, ...prevQueue])
-        setFileNameQueue(prevQueue => [fileObj.name, ...prevQueue])
-        setDisplayFileNameQueue(prevQueue => [fileObj.name.split('.').shift(), ...prevQueue])
-        
         const reader = new FileReader();
         reader.onload = function(e) {
-          setDisplayInputURIQueue(prevQueue => [reader.result, ...prevQueue])  // Store the data URL for displaying the image
+          setUpscaleQueue(prevQueue => [
+            {
+              inputFile: fileObj,
+              outputURI: null,
+              fileName: fileObj.name,
+              displayFileName: fileObj.name.split('.').shift(),
+              displayInputURI: reader.result,
+              status: 'Queued',
+              extension: fileObj.name.split('.').pop()
+            }, 
+            ...prevQueue
+          ])
         };
-        reader.readAsDataURL(fileObj);  // Convert the File object to a data URL for displaying
-        
-        setStatusQueue(prevQueue => ['Queued', ...prevQueue])
-        setExtensionQueue(prevQueue => [fileObj.name.split('.').pop(), ...prevQueue])
+        reader.readAsDataURL(fileObj);
       })
     }
   }
 
   const removeFileHandler = (index) => {
-    setInputURIQueue(prevQueue => prevQueue.filter((_, i) => i !== index))
-    setOutputURIQueue(prevQueue => prevQueue.filter((_, i) => i !== index))
-    setFileNameQueue(prevQueue => prevQueue.filter((_, i) => i !== index))
-    setDisplayFileNameQueue(prevQueue => prevQueue.filter((_, i) => i !== index))
-    setDisplayInputURIQueue(prevQueue => prevQueue.filter((_, i) => i !== index))
-    setStatusQueue(prevQueue => prevQueue.filter((_, i) => i !== index))
-    setExtensionQueue(prevQueue => prevQueue.filter((_, i) => i !== index))
+    setUpscaleQueue(prevQueue => prevQueue.filter((_, i) => i !== index))
   }
 
   return (
     <S.Container>
       <S.Sidebar>
         <img id='logo' src="webupscale-typography.svg" alt="WebUpscale"/>
-
+  
         <S.Description>Upscale batches of images in your browser with AI - private, free, and no installation required.</S.Description>
-
+  
         <Droppable
           onDrop={(files) => fileUploadHandler(files)}
           onClick={() => {document.getElementById("hiddenFileInput").click()}}
@@ -171,76 +135,80 @@ const upscaleImage = async (inputFile, index) => {
             </button>
           </span>
           <input type="file" id="hiddenFileInput" hidden multiple accept="image/*" onChange={e => fileUploadHandler(e.target.files)} />
-
         </Droppable>
-       
-       <S.Upscale>
-       
-       <button
-          onClick={() => {
-            if (statusQueue.length > 0 && statusQueue[activeProcessIndex] !== 'Processing') {
-              setActiveProcessIndex(0)
-            }
-          }}
-          disabled={!inputURIQueue.length}
-        >
-          Start Upscaling
-        </button>
-        <select onInput={inp => setUpscaleFactor(parseInt(inp.target.value))}>
-          <option value='2'>2x</option>
-          <option value='4'>4x</option>
-          <option value='8'>8x</option>
-        </select>
-       </S.Upscale>
-      
-      <S.Items>
-        {
-          inputURIQueue.map((inputURI, index) => (
-            <S.Item key={index} active={activeIndex === index} onClick={() => setActiveIndex(index)}>
-              <S.Thumbnail src={displayInputURIQueue[index]} /> 
-              <S.Details>
-                <S.Name >{`${displayFileNameQueue[index]}.${extensionQueue[index]}`}</S.Name>
-                <S.Status> {statusQueue[index]}</S.Status>{ statusQueue[index] === 'Processing' && <progress />}
-              </S.Details>
-
-              <S.Spacer />
-
-              <S.Buttons>
-              {
-                statusQueue[index] === 'Completed' && <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    const link = document.createElement('a')
-                    link.download = `${fileNameQueue[index]}_upscaled.${extensionQueue[index]}`
-                    link.href = outputURIQueue[index]
-                    link.click()
-                  }}
-                >
-                  Download
-                </button>
+  
+        <S.Upscale>
+          <button
+            onClick={() => {
+              if (upscaleQueue.length > 0 && upscaleQueue[activeProcessIndex]?.status !== 'Processing') {
+                setActiveProcessIndex(0)
               }
-              <button className={'delete-button'} onClick={() => removeFileHandler(index)}>X</button>
-              </S.Buttons>
-            </S.Item>
-          ))
-        }
-      </S.Items>
-     
+            }}
+            disabled={!upscaleQueue.length}
+          >
+            Start Upscaling
+          </button>
+          <select onInput={inp => setUpscaleFactor(parseInt(inp.target.value))}>
+            <option value='2'>2x</option>
+            <option value='4'>4x</option>
+            <option value='8'>8x</option>
+          </select>
+        </S.Upscale>
+  
+        <S.Items>
+          {
+            upscaleQueue.map((item, index) => (
+              <S.Item key={index} active={activeIndex === index} onClick={() => setActiveIndex(index)}>
+                <S.Thumbnail src={item.displayInputURI} />
+                <S.Details>
+                  <S.Name >{`${item.displayFileName}.${item.extension}`}</S.Name>
+                  <S.Status> {item.status}</S.Status>{ item.status === 'Processing' && <progress />}
+                </S.Details>
+  
+                <S.Spacer />
+  
+                <S.Buttons>
+                {
+                  item.status === 'Completed' && <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const link = document.createElement('a')
+                      link.download = `${item.fileName}_upscaled.${item.extension}`
+                      link.href = item.outputURI
+                      link.click()
+                    }}
+                  >
+                    Download
+                  </button>
+                }
+                <button className={'delete-button'} onClick={() => removeFileHandler(index)}>X</button>
+                </S.Buttons>
+              </S.Item>
+            ))
+          }
+        </S.Items>
       </S.Sidebar>
+  
       <S.Content>
       {
-          outputURIQueue[activeIndex] 
+          upscaleQueue[activeIndex]?.outputURI
             ? 
-                <ReactCompareSlider
+              <ReactCompareSlider
+                position={50}
+                itemOne={<S.Image src={upscaleQueue[activeIndex].displayInputURI} />}
+                itemTwo={<S.Image src={upscaleQueue[activeIndex].outputURI} />}
+              />
+            : upscaleQueue[activeIndex]?.displayInputURI
+              ? <ReactCompareSlider
                   position={50}
-                  itemOne={<S.Image src={displayInputURIQueue[activeIndex]} />}
-                  itemTwo={<S.Image src={outputURIQueue[activeIndex]} />}
+                  itemOne={<S.Image src={upscaleQueue[activeIndex].displayInputURI} />}
+                  itemTwo={<S.Image src={'/empty.svg'} />}
                 />
-            : 'Your upscales will appear here.'
+              : 'Your upscales will appear here.'
         }
       </S.Content>
     </S.Container>
-  )
+  )  
 }
 
 const S = {
@@ -263,7 +231,8 @@ const S = {
     width: calc(100% - 32px);
     max-width: 400px;
     padding: 8px 16px;
-    height: calc(100vh - 16px);
+    padding-bottom: 0;
+    height: calc(100vh - 8px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -304,6 +273,9 @@ const S = {
     flex-wrap: wrap;
     gap: 8px;
     width: 100%;
+    height: calc(100vh - 292px);
+    overflow-y: auto;
+    align-content: flex-start;
   `,
 
   Item: styled.div`
@@ -346,6 +318,7 @@ const S = {
 
   Content: styled.div`
     width: 100%;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -353,7 +326,7 @@ const S = {
 
   Image: styled.img`
     width: 100%;
-    height: 100%;
+    height: 100vh;
     display: flex;
     justify-content: center;
     object-fit: contain;

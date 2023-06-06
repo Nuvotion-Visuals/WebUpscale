@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { initialize, upscale } from 'upscale'
-import Image from 'next/image'
 import { ReactCompareSlider } from 'react-compare-slider'
 import localForage from 'localforage'
+import styled from 'styled-components'
+import Droppable from '@/components/Droppable'
 
 export default function Main() {
   const [inputURIQueue, setInputURIQueue] = useState([])
@@ -16,7 +17,7 @@ export default function Main() {
   const [loadProg, setLoadProg] = useState(-1)
   const [activeIndex, setActiveIndex] = useState(0)
   const [activeProcessIndex, setActiveProcessIndex] = useState(null) 
-
+  const [progress, setProgress] = useState(0)
   
 
   useEffect(() => {
@@ -81,7 +82,7 @@ const upscaleImage = async (inputFile, index) => {
         const reader = new FileReader();
         reader.onload = async function(e) {
           try {
-            const result = await upscale(reader.result, upscaleFactor)
+            const result = await upscale(reader.result, upscaleFactor, newProgress => setProgress(newProgress))
             setOutputURIQueue(prevQueue => {
               const newQueue = [...prevQueue]
               newQueue[index] = result
@@ -118,9 +119,9 @@ const upscaleImage = async (inputFile, index) => {
 }
 
 
-  const fileUploadHandler = (e) => {
-    if (e.target.files[0]) {
-      let fileObjects = Array.from(e.target.files)
+  const fileUploadHandler = (files) => {
+    if (files[0]) {
+      let fileObjects = Array.from(files)
       fileObjects.forEach(fileObj => {
         setInputURIQueue(prevQueue => [fileObj, ...prevQueue])  // Directly store the File object
         setOutputURIQueue(prevQueue => [null, ...prevQueue])
@@ -150,64 +151,209 @@ const upscaleImage = async (inputFile, index) => {
   }
 
   return (
-    <div>
-      {
-        outputURIQueue[activeIndex] 
-          ? <div style={{width: '512px'}}>
-              <ReactCompareSlider
-                position={50}
-                itemOne={<Image width='512' height='512' src={displayInputURIQueue[activeIndex]} />}
-                itemTwo={<Image width='512' height='512' src={outputURIQueue[activeIndex]} />}
-              />
-            </div>
-          : <Image src={displayInputURIQueue[activeIndex]} width='512' height='512'/>
-      }
-      <input
-        type='file'
-        onChange={fileUploadHandler}
-        onClick={e => e.target.value = null}
-        multiple
-      />
-      <button
-        onClick={() => {
-          if (statusQueue.length > 0 && statusQueue[activeProcessIndex] !== 'Processing') {
-            setActiveProcessIndex(0)
-          }
-        }}
-      >
-        Start
-      </button>
-      <select
-        onInput={inp => setUpscaleFactor(parseInt(inp.target.value))}
-      >
-        <option value='2'>2X</option>
-        <option value='4'>4X</option>
-        <option value='8'>8X</option>
-      </select>
-      {
-        inputURIQueue.map((inputURI, index) => (
-          <div key={index}>
-            <img src={displayInputURIQueue[index]} width="50" height="50" /> 
-            <p onClick={() => setActiveIndex(index)}>{displayFileNameQueue[index]}</p>
-            <p>Status: {statusQueue[index]}</p>
-            { statusQueue[index] === 'Processing' && <progress />}
-            {
-              statusQueue[index] === 'Completed' && <button
-                onClick={() => {
-                  const link = document.createElement('a')
-                  link.download = `${fileNameQueue[index]}.${extensionQueue[index]}`
-                  link.href = outputURIQueue[index]
-                  link.click()
-                }}
-              >
-                Download
-              </button>
-            }
-            <button onClick={() => removeFileHandler(index)}>X</button>
+    <S.Container>
+      <S.Sidebar>
+        <img id='logo' src="webupscale-typography.svg" alt="WebUpscale"/>
 
-          </div>
-        ))
-      }
-    </div>
+        <S.Description>Upscale batches of images in your browser with AI - private, free, and no installation required.</S.Description>
+
+        <Droppable
+          onDrop={(files) => fileUploadHandler(files)}
+          onClick={() => {document.getElementById("hiddenFileInput").click()}}
+        >
+          <span style={{width: '140px'}}>
+            <button onClick={e => {
+              e.stopPropagation()
+              document.getElementById("hiddenFileInput").click();
+            }}>
+              Upload
+            </button>
+          </span>
+          <input type="file" id="hiddenFileInput" hidden onChange={e => fileUploadHandler(e.target.files)} />
+
+        </Droppable>
+       
+       <S.Upscale>
+       
+       <button
+          onClick={() => {
+            if (statusQueue.length > 0 && statusQueue[activeProcessIndex] !== 'Processing') {
+              setActiveProcessIndex(0)
+            }
+          }}
+          disabled={!inputURIQueue.length}
+        >
+          Start Upscaling
+        </button>
+        <select onInput={inp => setUpscaleFactor(parseInt(inp.target.value))}>
+          <option value='2'>2x</option>
+          <option value='4'>4x</option>
+          <option value='8'>8x</option>
+        </select>
+       </S.Upscale>
+      
+      <S.Items>
+        {
+          inputURIQueue.map((inputURI, index) => (
+            <S.Item key={index} active={activeIndex === index} onClick={() => setActiveIndex(index)}>
+              <S.Thumbnail src={displayInputURIQueue[index]} /> 
+              <S.Details>
+                <S.Name >{`${displayFileNameQueue[index]}.${extensionQueue[index]}`}</S.Name>
+                <S.Status> {statusQueue[index]}</S.Status>{ statusQueue[index] === 'Processing' && <progress />}
+              </S.Details>
+
+              <S.Spacer />
+
+              <S.Buttons>
+              {
+                statusQueue[index] === 'Completed' && <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const link = document.createElement('a')
+                    link.download = `${fileNameQueue[index]}_upscaled.${extensionQueue[index]}`
+                    link.href = outputURIQueue[index]
+                    link.click()
+                  }}
+                >
+                  Download
+                </button>
+              }
+              <button className={'delete-button'} onClick={() => removeFileHandler(index)}>X</button>
+              </S.Buttons>
+            </S.Item>
+          ))
+        }
+      </S.Items>
+     
+      </S.Sidebar>
+      <S.Content>
+      {
+          outputURIQueue[activeIndex] 
+            ? 
+                <ReactCompareSlider
+                  position={50}
+                  itemOne={<S.Image src={displayInputURIQueue[activeIndex]} />}
+                  itemTwo={<S.Image src={outputURIQueue[activeIndex]} />}
+                />
+            : 'Your upscales will appear here.'
+        }
+      </S.Content>
+    </S.Container>
   )
+}
+
+const S = {
+  Container: styled.div`
+    width: 100%;
+    height: 100vh;
+    background: black;
+    display: flex;
+  `,
+
+  Description: styled.div`
+    font-size: 13px;
+    line-height: 19.5px;
+    margin-bottom: 20px;
+    color: #ccc;
+  `,
+
+
+  Sidebar: styled.div`
+    width: calc(100% - 32px);
+    max-width: 400px;
+    padding: 8px 16px;
+    height: calc(100vh - 16px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: left;
+    background-color: #121212;
+  `,
+
+  FileDrop: styled.div`
+  
+  `,
+
+  Buttons: styled.div`
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-right: 8px;
+  `,
+
+  Upscale: styled.div`
+    display: flex;
+    width: 100%;
+    gap: 8px;  
+    margin: 16px 0;
+  `,
+
+
+  Queue: styled.div`
+
+  `,
+
+  Spacer: styled.div`
+    display: flex;
+    flex-grow: 1;
+  `,
+
+  Items: styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  `,
+
+  Item: styled.div`
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    background: ${props => props.active ? 'var(--Surface_0)' : 'none'};
+    border-radius: 8px;
+    overflow: hidden;
+  `,
+
+  Thumbnail: styled.img`
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+  `,
+
+  Progress: styled.div`
+  
+  `,
+
+  Details: styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 8px;
+  `,
+
+  Name: styled.div`
+    font-size: 13px;
+    width: 100%;
+  `,
+
+  Status: styled.div`
+    font-size: 12px;
+    color: #ccc;
+  `,
+
+  Content: styled.div`
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  `,
+
+  Image: styled.img`
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    object-fit: contain;
+  `,
 }

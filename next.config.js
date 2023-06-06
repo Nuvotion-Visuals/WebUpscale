@@ -11,6 +11,27 @@ const withPWA = require('next-pwa')({
 module.exports = withPWA({
   reactStrictMode: false,
   images: { unoptimized: true }, // disable next/image optimization as doesn't work with static export
+  compiler: {
+    styledComponents: true
+  },
+  async headers() {
+    return [
+      {
+        // Apply these headers to all routes in your application.
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'require-corp',
+          },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin',
+          },
+        ],
+      },
+    ]
+  },
   webpack: (config, { }) => {
     config.plugins.push(
       new CopyPlugin({

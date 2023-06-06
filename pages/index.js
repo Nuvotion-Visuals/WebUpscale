@@ -31,7 +31,7 @@ const [dataLoaded, setDataLoaded] = useState(false)
 
 useEffect(() => {
   async function fetchData() {
-      const inputFiles = await localForage.getItem('inputFiles')  // Get File objects
+      const inputFiles = await localForage.getItem('inputFiles')
       const outputURIs = await localForage.getItem('outputURIs')
       const fileNames = await localForage.getItem('fileNames')
       const displayFileNames = await localForage.getItem('displayFileNames')
@@ -43,18 +43,19 @@ useEffect(() => {
           // Reset any 'Processing' status to 'Queued'
           const resetStatuses = statuses.map(status => status === 'Processing' ? 'Queued' : status)
 
-          setInputURIQueue(inputFiles)  // Use the File objects
+          setInputURIQueue(inputFiles)
           setOutputURIQueue(outputURIs)
           setFileNameQueue(fileNames)
           setDisplayFileNameQueue(displayFileNames)
           setDisplayInputURIQueue(displayInputURIs)
-          setStatusQueue(resetStatuses)  // Use the reset statuses
+          setStatusQueue(resetStatuses)
           setExtensionQueue(extensions)
-          setDataLoaded(true)  // Mark data as loaded
       }
+      setDataLoaded(true)  // Move this line outside the if block
   }
   fetchData()
 }, [])
+
 
 useEffect(() => {
   // Check if the data has been loaded before persisting

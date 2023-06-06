@@ -12,6 +12,7 @@ class MyDocument extends Document {
           <link rel="manifest" href="/manifest.json" />
           <meta property="og:type" content="website" />
           <meta property="og:title" content="WebUpscale | Free unlimited image upscaling in your browser using AI." />
+          <meta property="og:image" content="webupscale-social-share.png"></meta>
           <meta
             property="og:description"
             content="Free unlimited image upscaling in your browser using AI."

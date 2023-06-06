@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { initialize, upscale } from 'upscale'
 import { ReactCompareSlider } from 'react-compare-slider'
 import localForage from 'localforage'
@@ -104,6 +104,7 @@ export default function Main() {
         const reader = new FileReader();
         reader.onload = function(e) {
           setUpscaleQueue(prevQueue => [
+            ...prevQueue, 
             {
               inputFile: fileObj,
               outputURI: null,
@@ -112,18 +113,23 @@ export default function Main() {
               displayInputURI: reader.result,
               status: 'Queued',
               extension: fileObj.name.split('.').pop()
-            }, 
-            ...prevQueue
+            }
           ])
         };
         reader.readAsDataURL(fileObj);
       })
     }
-  }
+  }  
 
   const removeFileHandler = (index) => {
     setUpscaleQueue(prevQueue => prevQueue.filter((_, i) => i !== index))
   }
+
+  const disabled = useMemo(() => {
+    const isProcessing = upscaleQueue.some(item => item.status === 'Upscaling');
+    const hasQueuedItems = upscaleQueue.some(item => item.status === 'Queued');
+    return isProcessing || !hasQueuedItems;
+  }, [upscaleQueue]);
 
   return (
     <S.Container>
@@ -154,7 +160,7 @@ export default function Main() {
               upscaleImage(0) // start the upscaling from the first item in the queue
             }
           }}
-          disabled={!upscaleQueue.length}
+          disabled={disabled}
         >
           Start Upscaling
         </button>
@@ -218,8 +224,8 @@ export default function Main() {
                 : 'Your upscales will appear here.'
             : <ReactCompareSlider
                 position={50}
-                itemOne={<S.Image src={'/images/colorful-reaction-diffusion.png'} />}
-                itemTwo={<S.Image src={'/images/colorful-reaction-diffusion_4x.png'} />}
+                itemOne={<S.Image src={'/images/tree.png'} />}
+                itemTwo={<S.Image src={'/images/tree_4x.png'} />}
               />
         }
       </S.Content>

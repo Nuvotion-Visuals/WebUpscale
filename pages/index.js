@@ -4,6 +4,8 @@ import { ReactCompareSlider } from 'react-compare-slider'
 import localForage from 'localforage'
 import styled from 'styled-components'
 import Droppable from '@/components/Droppable'
+import Progress from '@/components/Progress'
+import Image from 'next/image'
 
 export default function Main() {
   const [upscaleQueue, setUpscaleQueue] = useState([])
@@ -11,7 +13,6 @@ export default function Main() {
   const [loadProg, setLoadProg] = useState(-1)
   const [activeIndex, setActiveIndex] = useState(0)
   const [activeProcessIndex, setActiveProcessIndex] = useState(null)
-  const [progress, setProgress] = useState(0)
   const [dataLoaded, setDataLoaded] = useState(false)
 
   useEffect(() => {
@@ -63,7 +64,7 @@ export default function Main() {
         const reader = new FileReader();
         reader.onload = async function(e) {
           try {
-            const result = await upscale(reader.result, upscaleFactor, newProgress => setProgress(newProgress))
+            const result = await upscale(reader.result, upscaleFactor)
             setUpscaleQueue(prevQueue => {
               const newQueue = [...prevQueue]
               newQueue[index].outputURI = result
@@ -134,27 +135,29 @@ export default function Main() {
   return (
     <S.Container>
       <S.Sidebar>
-        <img id='logo' src="webupscale-typography.svg" alt="WebUpscale"/>
+        <S.Top>
+        <S.Logo src="webupscale-typography.svg" alt="WebUpscale"/>
   
-        <S.Description>Upscale batches of images in your browser with AI - private, free, and no installation required.</S.Description>
+        <S.Description>Upscale batches of images in your browser with AI - private, free, and no installation required. 2x scaling is recommended.</S.Description>
   
         <Droppable
           onDrop={(files) => fileUploadHandler(files)}
           onClick={() => {document.getElementById("hiddenFileInput").click()}}
         >
           <span style={{width: '140px'}}>
-            <button onClick={e => {
+            <S.Button onClick={e => {
               e.stopPropagation()
               document.getElementById("hiddenFileInput").click();
             }}>
+              <img src='upload.svg' />
               Upload
-            </button>
+            </S.Button>
           </span>
           <input type="file" id="hiddenFileInput" hidden multiple accept="image/*" onChange={e => fileUploadHandler(e.target.files)} />
         </Droppable>
   
         <S.Upscale>
-        <button
+        <S.Button
           onClick={() => {
             if (upscaleQueue.length > 0 && upscaleQueue[0]?.status !== 'Upscaling') {
               upscaleImage(0) // start the upscaling from the first item in the queue
@@ -163,13 +166,15 @@ export default function Main() {
           disabled={disabled}
         >
           Start Upscaling
-        </button>
-          <select onInput={inp => setUpscaleFactor(parseInt(inp.target.value))}>
+        </S.Button>
+          <S.Select onInput={inp => setUpscaleFactor(parseInt(inp.target.value))}>
             <option value='2'>2x</option>
             <option value='4'>4x</option>
             <option value='8'>8x</option>
-          </select>
+          </S.Select>
         </S.Upscale>
+
+        </S.Top>
   
         <S.Items>
           {
@@ -178,14 +183,16 @@ export default function Main() {
                 <S.Thumbnail src={item.displayInputURI} />
                 <S.Details>
                   <S.Name >{`${item.displayFileName}.${item.extension}`}</S.Name>
-                  <S.Status> {item.status}</S.Status>{ item.status === 'Upscaling' && <progress />}
+                  <S.Progress>
+                    <S.Status> {item.status}</S.Status>{ item.status === 'Upscaling' && <Progress />}
+                  </S.Progress>
                 </S.Details>
   
                 <S.Spacer />
   
                 <S.Buttons>
                 {
-                  item.status === 'Completed' && <button
+                  item.status === 'Completed' && <S.SquareButton
                     onClick={(e) => {
                       e.stopPropagation()
                       const link = document.createElement('a')
@@ -194,15 +201,18 @@ export default function Main() {
                       link.click()
                     }}
                   >
-                    Download
-                  </button>
+                      <img src='download.svg' />
+                  </S.SquareButton>
                 }
-                <button className={'delete-button'} onClick={() => removeFileHandler(index)}>✕</button>
+                <S.SquareButton onClick={() => removeFileHandler(index)}>✕</S.SquareButton>
                 </S.Buttons>
               </S.Item>
             ))
           }
         </S.Items>
+        <S.Link>
+          <a href="https://avsync.live" target="_blank"><Image height={18} width={18} src='up-right-from-square-solid.svg' />Create audio-reactive visuals for free</a>
+        </S.Link>
       </S.Sidebar>
   
       <S.Content>
@@ -248,22 +258,29 @@ const S = {
     color: #ccc;
   `,
 
+  Top: styled.div`
+    padding: 16px;
+    padding-top: 8px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+  `,
+
+  Logo: styled.img`
+    width: 100%;
+    max-width: 300px;
+    margin-bottom: 10px;
+  `,
 
   Sidebar: styled.div`
-    width: calc(100% - 32px);
-    max-width: 400px;
-    padding: 8px 16px;
+    max-width: 432px;
     padding-bottom: 0;
-    height: calc(100vh - 8px);
+    height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: left;
     background-color: #121212;
-  `,
-
-  FileDrop: styled.div`
-  
   `,
 
   Buttons: styled.div`
@@ -276,12 +293,7 @@ const S = {
     display: flex;
     width: 100%;
     gap: 8px;  
-    margin: 16px 0;
-  `,
-
-
-  Queue: styled.div`
-
+    margin-top: 16px;
   `,
 
   Spacer: styled.div`
@@ -293,7 +305,8 @@ const S = {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    width: 100%;
+    width: calc(100% - 32px);
+    padding: 0 16px;
     height: calc(100vh - 292px);
     overflow-y: auto;
     align-content: flex-start;
@@ -305,8 +318,6 @@ const S = {
     display: flex;
     align-items: center;
     background: ${props => props.active ? 'var(--Surface_0)' : 'none'};
-    border-radius: 8px;
-    overflow: hidden;
     cursor: pointer;
   `,
 
@@ -316,8 +327,85 @@ const S = {
     object-fit: contain;
   `,
 
+  Select: styled.select`
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: var(--Surface);
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+  `,
+
   Progress: styled.div`
-  
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  `,
+
+  Button: styled.button`
+    display: inline-block;
+    padding: 8px 16px;
+    width: 100%;
+    background-color: var(--Surface);
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background-color: var(--Surface_1);
+    }
+
+    &:disabled {
+      background-color: var(--Surface) !important;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    img {
+      margin-right: 8px;
+      filter: invert();
+    }
+  `,
+
+  SquareButton: styled.button`
+    background-color: var(--Surface);
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+
+   
+    width: 32px;
+    min-width: 32px;
+    max-width: 32px;
+    max-height: 32px;
+    height: 32px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background-color: var(--Surface_1);
+    }
+
+    &:disabled {
+      background-color: var(--Surface) !important;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    img {
+      filter: invert();
+    }
   `,
 
   Details: styled.div`
@@ -351,5 +439,31 @@ const S = {
     display: flex;
     justify-content: center;
     object-fit: contain;
+  `,
+
+  Link: styled.div`
+    display: flex;
+    align-items: center;
+    bottom: 0;
+    width: calc(100% - 32px);
+    border-top: 1px solid var(--Surface);
+    padding: 16px;
+
+    a {
+        font-size: 13px;
+        color: #bbb;
+        text-decoration: underline;
+        display: flex;
+        gap: 8px;
+    }
+
+    img {
+        height: 18px;
+        color: #bbb;
+        text-decoration: underline;
+        display: flex;
+        gap: 8px;
+        margin-top: -1px;
+    }
   `,
 }

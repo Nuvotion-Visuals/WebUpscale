@@ -9,7 +9,10 @@ const withPWA = require('next-pwa')({
 
 
 module.exports = withPWA({
-  reactStrictMode: false,
+  experimental: {
+    runtime: 'experimental-edge',
+  },
+  reactStrictMode: true,
   images: { unoptimized: true }, // disable next/image optimization as doesn't work with static export
   compiler: {
     styledComponents: true

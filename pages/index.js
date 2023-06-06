@@ -178,7 +178,7 @@ const upscaleImage = async (inputFile, index) => {
         Start
       </button>
       <select
-        onInput={inp => setUpscaleFactorHandler(parseInt(inp.target.value))}
+        onInput={inp => setUpscaleFactor(parseInt(inp.target.value))}
       >
         <option value='2'>2X</option>
         <option value='4'>4X</option>

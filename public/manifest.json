@@ -4,8 +4,8 @@
   "display": "standalone",
   "scope": "/",
   "start_url": "/",
-  "name": "WebUpscale",
-  "short_name": "WebUpscale",
+  "name": "AVsync.LIVE WebUpscale",
+  "short_name": "AVsync.LIVE WebUpscale",
   "description": "Free unlimited image upscaling in your browser using AI.",
   "icons": [
     {

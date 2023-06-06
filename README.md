@@ -2,6 +2,8 @@
 
 Free unlimited image upscaling in your browser using AI.
 
+[Try it out](https://webupscale.avsync.live)
+
 ## Features
 
 - Batch processing of images

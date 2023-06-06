@@ -26,7 +26,7 @@ const S = {
       box-sizing:border-box;
       border: 2px dashed gray;
       background: var(--Background_Alternating);
-
+ 
     .file-drop-target {
       /* basic styles */
       position: absolute;
@@ -68,7 +68,6 @@ const S = {
     .file-drop-target.file-drop-dragging-over-frame {
       /* overlay a black mask when dragging over the frame */
       border: none;
-      background: var(--Primary);
       box-shadow: none;
       z-index: 50;
       opacity: 1;

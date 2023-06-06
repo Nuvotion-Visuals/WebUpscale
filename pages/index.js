@@ -25,7 +25,7 @@ export default function Main() {
       const savedQueue = await localForage.getItem('upscaleQueue')
       if (savedQueue) {
         const queue = savedQueue.map(item => {
-          if (item.status === 'Processing') {
+          if (item.status === 'Upscaling') {
             item.status = 'Queued'
           }
           return item
@@ -44,10 +44,18 @@ export default function Main() {
   }, [dataLoaded, upscaleQueue])
 
   const upscaleImage = async (index) => {
+     // Check if the image is already completed
+    if(upscaleQueue[index].status === 'Completed') {
+      // If the image is completed and it's not the last image in the queue
+      if(index < upscaleQueue.length - 1) {
+        upscaleImage(index + 1); // Call the next image in the queue
+      }
+      return; // Do not continue with the current image
+    }
     setLoadProg(0)
     setUpscaleQueue(prevQueue => {
       const newQueue = [...prevQueue]
-      newQueue[index].status = 'Processing'
+      newQueue[index].status = 'Upscaling'
       return newQueue
     })
     initialize(setLoadProg)
@@ -62,12 +70,18 @@ export default function Main() {
               newQueue[index].status = 'Completed'
               return newQueue
             })
+            if (index < upscaleQueue.length - 1) { // check if there are more items to process
+              upscaleImage(index + 1); // call the next item in the queue
+            }
           } catch(error) {
             setUpscaleQueue(prevQueue => {
               const newQueue = [...prevQueue]
               newQueue[index].status = 'Error: ' + error
               return newQueue
             })
+            if (index < upscaleQueue.length - 1) { // check if there are more items to process
+              upscaleImage(index + 1); // call the next item in the queue
+            }
           }
         };
         reader.readAsDataURL(upscaleQueue[index].inputFile);
@@ -79,13 +93,9 @@ export default function Main() {
       }))
       .finally(() => {
         setLoadProg(-1)
-        if (activeProcessIndex < upscaleQueue.length - 1) {
-          setActiveProcessIndex(activeProcessIndex + 1)
-        } else {
-          setActiveProcessIndex(null)
-        }
       })
   }
+  
 
   const fileUploadHandler = (files) => {
     if (files[0]) {
@@ -138,16 +148,16 @@ export default function Main() {
         </Droppable>
   
         <S.Upscale>
-          <button
-            onClick={() => {
-              if (upscaleQueue.length > 0 && upscaleQueue[activeProcessIndex]?.status !== 'Processing') {
-                setActiveProcessIndex(0)
-              }
-            }}
-            disabled={!upscaleQueue.length}
-          >
-            Start Upscaling
-          </button>
+        <button
+          onClick={() => {
+            if (upscaleQueue.length > 0 && upscaleQueue[0]?.status !== 'Upscaling') {
+              upscaleImage(0) // start the upscaling from the first item in the queue
+            }
+          }}
+          disabled={!upscaleQueue.length}
+        >
+          Start Upscaling
+        </button>
           <select onInput={inp => setUpscaleFactor(parseInt(inp.target.value))}>
             <option value='2'>2x</option>
             <option value='4'>4x</option>
@@ -162,7 +172,7 @@ export default function Main() {
                 <S.Thumbnail src={item.displayInputURI} />
                 <S.Details>
                   <S.Name >{`${item.displayFileName}.${item.extension}`}</S.Name>
-                  <S.Status> {item.status}</S.Status>{ item.status === 'Processing' && <progress />}
+                  <S.Status> {item.status}</S.Status>{ item.status === 'Upscaling' && <progress />}
                 </S.Details>
   
                 <S.Spacer />
@@ -181,7 +191,7 @@ export default function Main() {
                     Download
                   </button>
                 }
-                <button className={'delete-button'} onClick={() => removeFileHandler(index)}>X</button>
+                <button className={'delete-button'} onClick={() => removeFileHandler(index)}>✕</button>
                 </S.Buttons>
               </S.Item>
             ))
@@ -191,20 +201,26 @@ export default function Main() {
   
       <S.Content>
       {
-          upscaleQueue[activeIndex]?.outputURI
-            ? 
-              <ReactCompareSlider
-                position={50}
-                itemOne={<S.Image src={upscaleQueue[activeIndex].displayInputURI} />}
-                itemTwo={<S.Image src={upscaleQueue[activeIndex].outputURI} />}
-              />
-            : upscaleQueue[activeIndex]?.displayInputURI
-              ? <ReactCompareSlider
+          upscaleQueue.length
+            ? upscaleQueue[activeIndex]?.outputURI
+              ? 
+                <ReactCompareSlider
                   position={50}
                   itemOne={<S.Image src={upscaleQueue[activeIndex].displayInputURI} />}
-                  itemTwo={<S.Image src={'/empty.svg'} />}
+                  itemTwo={<S.Image src={upscaleQueue[activeIndex].outputURI} />}
                 />
-              : 'Your upscales will appear here.'
+              : upscaleQueue[activeIndex]?.displayInputURI
+                ? <ReactCompareSlider
+                    position={50}
+                    itemOne={<S.Image src={upscaleQueue[activeIndex].displayInputURI} />}
+                    itemTwo={<S.Image src={'/empty.svg'} />}
+                  />
+                : 'Your upscales will appear here.'
+            : <ReactCompareSlider
+                position={50}
+                itemOne={<S.Image src={'/images/colorful-reaction-diffusion.png'} />}
+                itemTwo={<S.Image src={'/images/colorful-reaction-diffusion_4x.png'} />}
+              />
         }
       </S.Content>
     </S.Container>
@@ -248,7 +264,6 @@ const S = {
     display: flex;
     gap: 8px;
     align-items: center;
-    margin-right: 8px;
   `,
 
   Upscale: styled.div`

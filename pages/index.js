@@ -169,7 +169,7 @@ const upscaleImage = async (inputFile, index) => {
               Upload
             </button>
           </span>
-          <input type="file" id="hiddenFileInput" hidden onChange={e => fileUploadHandler(e.target.files)} />
+          <input type="file" id="hiddenFileInput" hidden multiple accept="image/*" onChange={e => fileUploadHandler(e.target.files)} />
 
         </Droppable>
        
@@ -313,6 +313,7 @@ const S = {
     background: ${props => props.active ? 'var(--Surface_0)' : 'none'};
     border-radius: 8px;
     overflow: hidden;
+    cursor: pointer;
   `,
 
   Thumbnail: styled.img`
